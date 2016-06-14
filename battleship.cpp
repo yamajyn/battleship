@@ -25,6 +25,7 @@ BOOL isRun = FALSE;     		/*é¿çsíÜÇÕ TRUE*/
 #define Shell_H    2
 POINT shell[60];  	                        /* ñCíeÇÃà íuÅ@*/
 float shell_dirx = 1., shell_diry = -1.;
+int shellNum = 0;
 
 #define GUN_W  50
 #define GUN_H  10
@@ -132,6 +133,9 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		InvalidateRect(hWnd , NULL , FALSE);
 		return 0;
 
+	case WM_BUTTONUP:
+		shellNum +=1;
+
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd , &ps);
 		Paint(hBufferDC,hMemDC);
@@ -211,7 +215,9 @@ VOID PaintShell(HDC hdc)
 {
 	SelectObject(hdc , GetStockObject(NULL_PEN));
 	SelectObject(hdc , GetStockObject(BLACK_BRUSH));
-	for(int i = 0; i<60; i++){
-		Rectangle(hdc , shell[i].x , shell[i].y , shell[i].x + Shell_W, shell[i].y + Shell_H);
+	if(shellNum<60){
+		for(int i = 0; i<shellNum; i++){
+			Rectangle(hdc , shell[i].x , shell[i].y , shell[i].x + Shell_W, shell[i].y + Shell_H);
+		}
 	}
 }
