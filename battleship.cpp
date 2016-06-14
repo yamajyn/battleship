@@ -133,8 +133,11 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		InvalidateRect(hWnd , NULL , FALSE);
 		return 0;
 
-	case WM_BUTTONUP:
-		shellNum +=1;
+	case WM_LBUTTONUP:
+		if(shellNum<60){
+			shellNum +=1;
+		}
+		return 0;
 
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd , &ps);
@@ -175,7 +178,9 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
 }
 
 VOID MoveShell(){
-	shell[0].x += 3;
+	for(int i = 0; i<shellNum; i++){
+		shell[i].x += 3;
+	}
 }
 
 
@@ -215,9 +220,7 @@ VOID PaintShell(HDC hdc)
 {
 	SelectObject(hdc , GetStockObject(NULL_PEN));
 	SelectObject(hdc , GetStockObject(BLACK_BRUSH));
-	if(shellNum<60){
-		for(int i = 0; i<shellNum; i++){
-			Rectangle(hdc , shell[i].x , shell[i].y , shell[i].x + Shell_W, shell[i].y + Shell_H);
-		}
+	for(int i = 0; i<shellNum; i++){
+		Rectangle(hdc , shell[i].x , shell[i].y , shell[i].x + Shell_W, shell[i].y + Shell_H);
 	}
 }
