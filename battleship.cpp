@@ -1,10 +1,12 @@
 #include <windows.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
 
 #define APP_NAME		TEXT("Battleship")
 #define WND_TITLE		TEXT("Battleship")
-#define WND_WIDTH 800
-#define WND_HEIGHT 400
+//#define WND_WIDTH 800
+//#define WND_HEIGHT 400
 LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 DWORD WINAPI ThreadFunc(LPVOID vdParam) ;
 VOID Paint(HDC,HDC);
@@ -12,6 +14,7 @@ VOID PaintBackground(HDC);
 VOID PaintBattleships(HDC,HDC,int x,int y);
 VOID PaintGun(HDC hdc);
 VOID PaintShell(HDC);
+VOID MoveGun(VOID);
 VOID MoveShell(VOID);
 
 HWND hMainWindow;       		/*アプリケーションウィンドウのハンドル*/
@@ -21,15 +24,18 @@ int waitTime = 30;
 BOOL isRun = FALSE;     		/*実行中は TRUE*/
 
 #define Shell_MOVE  5
-#define Shell_W    5
-#define Shell_H    2
+#define Shell_W    8
+#define Shell_H    5
 POINT shell[60];  	                        /* 砲弾の位置　*/
 float shell_dirx = 1., shell_diry = -1.;
 int shellNum = 0;
 
 #define GUN_W  50
 #define GUN_H  10
-POINT gun = { 300 , 400 };
+POINT gun = { 210 , 340 };
+float gunAngle = 0;
+
+POINT mouse = { 300 , 400 };
 
 
 
@@ -38,8 +44,12 @@ RECT wnd_rect;
 static HBRUSH hBrushRed;
 static HBRUSH hBrushSky;
 static HBRUSH hBrushSea;
-
-#define SHIP_IMAGE TEXT("AOBA.bmp")
+static HBITMAP hBmpShip[5];
+#define IMAGE_01 TEXT("img/aoba-01.bmp")
+#define IMAGE_02 TEXT("img/aoba-02.bmp")
+#define IMAGE_03 TEXT("img/aoba-03.bmp")
+#define IMAGE_04 TEXT("img/aoba-04.bmp")
+#define IMAGE_05 TEXT("img/aoba-05.bmp")
 
 //-----------------------------------------------------------------
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,PSTR lpCmdLine, int nCmdShow){
@@ -63,7 +73,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,PSTR lpCmdLine,
 		APP_NAME , WND_TITLE ,
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 		CW_USEDEFAULT , CW_USEDEFAULT,
-		WND_WIDTH  , WND_HEIGHT,
+		CW_USEDEFAULT  , CW_USEDEFAULT,
 		NULL , NULL , hInstance , NULL	);
 	if (hMainWindow == NULL) return 0;
 
@@ -81,8 +91,7 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	/*ダブルバッファリング用のビットマップとデバイスコンテキスト*/
 	static HBITMAP hWndBuffer;
 	static HDC hBufferDC;
-	static HBITMAP hBmpShip;
-	static BITMAP bmpShip;
+
 
 	static HDC hMemDC;
 	static HINSTANCE hInstance;
@@ -108,13 +117,12 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		hMemDC = CreateCompatibleDC(NULL);
 
-		hBmpShip = (HBITMAP)LoadImage(
-			(HINSTANCE)GetWindowLong(hWnd,GWL_HINSTANCE),
-			SHIP_IMAGE,IMAGE_BITMAP,
-			0,0,LR_LOADFROMFILE);
 
-			SelectObject(hMemDC,hBmpShip);
-			GetObject(hBmpShip,sizeof(bmpShip),&bmpShip);
+		hBmpShip[0] = (HBITMAP)LoadImage(hInstance,IMAGE_01,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+		hBmpShip[1] = (HBITMAP)LoadImage(hInstance,IMAGE_02,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+		hBmpShip[2] = (HBITMAP)LoadImage(hInstance,IMAGE_03,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+		hBmpShip[3] = (HBITMAP)LoadImage(hInstance,IMAGE_04,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+		hBmpShip[4] = (HBITMAP)LoadImage(hInstance,IMAGE_05,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 
 
 		isRun = TRUE;
@@ -122,15 +130,8 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return 0;
 
 	case WM_MOUSEMOVE:
-		gun.x  = LOWORD(lParam) - (GUN_W/2);
-		if      (gun.x         < 0    ) gun.x = 0;
-		else if (gun.x + GUN_W > wnd_rect.right) gun.x = wnd_rect.right - GUN_W;
-
-		gun.y  = HIWORD(lParam) - (GUN_H/2);
-		if      (gun.y         < 0    ) gun.y = 0;
-		else if (gun.y + GUN_H > wnd_rect.bottom) gun.y = wnd_rect.bottom - GUN_H;
-
-		InvalidateRect(hWnd , NULL , FALSE);
+		mouse.x = LOWORD(lParam);
+		mouse.y = HIWORD(lParam);
 		return 0;
 
 	case WM_LBUTTONUP:
@@ -140,6 +141,7 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return 0;
 
 	case WM_PAINT:
+
 		hdc = BeginPaint(hWnd , &ps);
 		Paint(hBufferDC,hMemDC);
 		BitBlt(hdc, 0, 0, wnd_rect.right, wnd_rect.bottom, hBufferDC, 0, 0,SRCCOPY);
@@ -152,7 +154,9 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		DeleteObject(hBrushRed);
 		DeleteObject(hBrushSky);
 		DeleteObject(hBrushSea);
-		DeleteObject(hBmpShip);
+		for(int i =0; i<5; i++){
+			DeleteObject(hBmpShip[i]);
+		}
 
 			PostQuitMessage(0);
 			return 0;
@@ -164,12 +168,13 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 DWORD WINAPI ThreadFunc(LPVOID vdParam){
 	srand ((unsigned) time(NULL));
 	for(int i =0; i<60; i++){
-		shell[i].x = 120;
-		shell[i].y = wnd_rect.bottom-seaHeight+15;
+		shell[i].x = gun.x;
+		shell[i].y = gun.y;
 	}
 	HWND hWnd = (HWND)vdParam;
 	while(isRun)
 	{
+		MoveGun();
 		MoveShell();
 		InvalidateRect(hWnd , NULL , FALSE);
 		Sleep(waitTime);
@@ -177,6 +182,9 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
 	return TRUE;
 }
 
+VOID MoveGun(){
+	gunAngle = atan2(-(mouse.y-gun.y),mouse.x-gun.x);
+}
 VOID MoveShell(){
 	for(int i = 0; i<shellNum; i++){
 		shell[i].x += 3;
@@ -194,6 +202,9 @@ VOID Paint(HDC hdc,HDC hMemDC){
 	PaintBattleships(hdc,hMemDC,50,wnd_rect.bottom-seaHeight-10);
 	PaintGun(hdc);
 	PaintShell(hdc);
+	char buf[256];
+	sprintf(buf," mouse  %d %d gunAngle %0.3f",mouse.x,mouse.y,gunAngle);
+	TextOut(hdc,0,0,buf,strlen(buf));
 }
 
 VOID PaintBackground(HDC hdc){
@@ -205,15 +216,24 @@ VOID PaintBackground(HDC hdc){
 }
 
 VOID PaintBattleships(HDC hBufferDC,HDC hMemDC,int x, int y){
+	float max = 0.785;
 	//BitBlt(hBufferDC, x, y, wnd_rect.right, wnd_rect.bottom, hMemDC, 0, 0,SRCCOPY);
-	TransparentBlt(hBufferDC,x,y,100,50,hMemDC,0,0,100,50,RGB(0,255,0));
+
+	//GetObject(hBmpShip1,sizeof(bmpShip1),&bmpShip1);
+
+	for(int i= 0; i<5; i++){
+		if(gunAngle>max*i/5 && gunAngle<=max*(i+1)/5){
+			SelectObject(hMemDC,hBmpShip[i]);
+		}
+	}
+	TransparentBlt(hBufferDC,x,y,200,100,hMemDC,0,0,200,100,RGB(0,255,0));
 }
 
 VOID PaintGun(HDC hdc)
 {
-	SelectObject(hdc , GetStockObject(BLACK_PEN));
+	/*SelectObject(hdc , GetStockObject(BLACK_PEN));
 	SelectObject(hdc , GetStockObject(WHITE_BRUSH));
-	Rectangle(hdc , gun.x, gun.y, gun.x+GUN_W, gun.y+GUN_H);
+	Rectangle(hdc , gun.x, gun.y, gun.x+GUN_W, gun.y+GUN_H);*/
 }
 
 VOID PaintShell(HDC hdc)
