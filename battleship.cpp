@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 
 #define APP_NAME		TEXT("Battleship")
 #define WND_TITLE		TEXT("Battleship")
@@ -23,7 +24,7 @@ int seaHeight =150;
 int waitTime = 30;
 BOOL isRun = FALSE;     		/*é¿çsíÜÇÕ TRUE*/
 
-#define Shell_MOVE  5
+#define Shell_MOVE  5.
 #define Shell_W    8
 #define Shell_H    5
 POINT shell[60];  	                        /* ñCíeÇÃà íuÅ@*/
@@ -37,6 +38,8 @@ float gunAngle = 0;
 
 POINT mouse = { 300 , 400 };
 
+double firingTime[60];
+float firingAngle[60];
 
 
 RECT wnd_rect;
@@ -136,6 +139,8 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	case WM_LBUTTONUP:
 		if(shellNum<60){
+			firingTime[shellNum] = clock();
+			firingAngle[shellNum] = gunAngle;
 			shellNum +=1;
 		}
 		return 0;
@@ -170,6 +175,7 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
 	for(int i =0; i<60; i++){
 		shell[i].x = gun.x;
 		shell[i].y = gun.y;
+		firingTime[i] = 0;
 	}
 	HWND hWnd = (HWND)vdParam;
 	while(isRun)
@@ -186,8 +192,12 @@ VOID MoveGun(){
 	gunAngle = atan2(-(mouse.y-gun.y),mouse.x-gun.x);
 }
 VOID MoveShell(){
+	double now = clock();
+	float g = 9.87;
 	for(int i = 0; i<shellNum; i++){
-		shell[i].x += 3;
+		double t = (now - firingTime[i])/1000;
+		shell[i].x += Shell_MOVE;
+		shell[i].y = gun.y - Shell_MOVE*sin(firingAngle[i]) * t*10 +1/2 *g*t*t*10;
 	}
 }
 
@@ -202,8 +212,8 @@ VOID Paint(HDC hdc,HDC hMemDC){
 	PaintBattleships(hdc,hMemDC,50,wnd_rect.bottom-seaHeight-10);
 	PaintGun(hdc);
 	PaintShell(hdc);
-	char buf[256];
-	sprintf(buf," mouse  %d %d gunAngle %0.3f",mouse.x,mouse.y,gunAngle);
+	char buf[1024];
+	sprintf(buf," mouse  %d %d gunAngle %0.3f shell[0].y %0.3lf",mouse.x,mouse.y,gunAngle,clock());
 	TextOut(hdc,0,0,buf,strlen(buf));
 }
 
@@ -218,9 +228,6 @@ VOID PaintBackground(HDC hdc){
 VOID PaintBattleships(HDC hBufferDC,HDC hMemDC,int x, int y){
 	float max = 0.785;
 	//BitBlt(hBufferDC, x, y, wnd_rect.right, wnd_rect.bottom, hMemDC, 0, 0,SRCCOPY);
-
-	//GetObject(hBmpShip1,sizeof(bmpShip1),&bmpShip1);
-
 	for(int i= 0; i<5; i++){
 		if(gunAngle>max*i/5 && gunAngle<=max*(i+1)/5){
 			SelectObject(hMemDC,hBmpShip[i]);
