@@ -21,10 +21,10 @@ VOID MoveShell(VOID);
 HWND hMainWindow;       		/*アプリケーションウィンドウのハンドル*/
 
 int seaHeight =150;
-int waitTime = 30;
+int waitTime = 1;
 BOOL isRun = FALSE;     		/*実行中は TRUE*/
 
-#define Shell_MOVE  5.
+#define Shell_MOVE  30.
 #define Shell_W    8
 #define Shell_H    5
 POINT shell[60];  	                        /* 砲弾の位置　*/
@@ -34,12 +34,12 @@ int shellNum = 0;
 #define GUN_W  50
 #define GUN_H  10
 POINT gun = { 210 , 340 };
-float gunAngle = 0;
+double gunAngle = 0;
 
 POINT mouse = { 300 , 400 };
 
-double firingTime[60];
-float firingAngle[60];
+int firingTime[60];
+double firingAngle[60];
 
 
 RECT wnd_rect;
@@ -107,6 +107,7 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		hInstance = (HINSTANCE)GetWindowLong(hWnd,GWL_HINSTANCE);
 
 		GetClientRect(hWnd, &wnd_rect);
+		gun.y = wnd_rect.bottom-seaHeight-10 +50;
 
 		hdc = GetDC(hWnd);
 		hWndBuffer = CreateCompatibleBitmap(hdc, wnd_rect.right, wnd_rect.bottom);
@@ -189,15 +190,23 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
 }
 
 VOID MoveGun(){
-	gunAngle = atan2(-(mouse.y-gun.y),mouse.x-gun.x);
+	if(mouse.x!=gun.x){
+		gunAngle = atan2(-(mouse.y-gun.y),mouse.x-gun.x);
+		if(gunAngle>0.785){
+			gunAngle = 0.785;
+		}else if(gunAngle <0){
+			gunAngle = 0;
+		}
+}
 }
 VOID MoveShell(){
-	double now = clock();
-	float g = 9.87;
+
+	double g = 9.8;
 	for(int i = 0; i<shellNum; i++){
-		double t = (now - firingTime[i])/1000;
-		shell[i].x += Shell_MOVE;
-		shell[i].y = gun.y - Shell_MOVE*sin(firingAngle[i]) * t*10 +1/2 *g*t*t*10;
+		double now = clock();
+		double t = double(now - firingTime[i])/1000.;
+		shell[i].x = gun.x + (Shell_MOVE * cos(firingAngle[i])*t)*14.;
+		shell[i].y = gun.y + (-Shell_MOVE*sin(firingAngle[i]) * t + g*t*t/2.)*10.;
 	}
 }
 
@@ -212,8 +221,8 @@ VOID Paint(HDC hdc,HDC hMemDC){
 	PaintBattleships(hdc,hMemDC,50,wnd_rect.bottom-seaHeight-10);
 	PaintGun(hdc);
 	PaintShell(hdc);
-	char buf[1024];
-	sprintf(buf," mouse  %d %d gunAngle %0.3f shell[0].y %0.3lf",mouse.x,mouse.y,gunAngle,clock());
+	char buf[128];
+	sprintf(buf," mouse  %d %d gunAngle %0.3f shell.y %d ",mouse.x,mouse.y,gunAngle,shell[0].y);
 	TextOut(hdc,0,0,buf,strlen(buf));
 }
 
@@ -228,6 +237,7 @@ VOID PaintBackground(HDC hdc){
 VOID PaintBattleships(HDC hBufferDC,HDC hMemDC,int x, int y){
 	float max = 0.785;
 	//BitBlt(hBufferDC, x, y, wnd_rect.right, wnd_rect.bottom, hMemDC, 0, 0,SRCCOPY);
+	SelectObject(hMemDC,hBmpShip[0]);
 	for(int i= 0; i<5; i++){
 		if(gunAngle>max*i/5 && gunAngle<=max*(i+1)/5){
 			SelectObject(hMemDC,hBmpShip[i]);
