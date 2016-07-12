@@ -17,14 +17,14 @@ VOID PaintGun(HDC hdc);
 VOID PaintShell(HDC);
 VOID MoveGun(VOID);
 VOID MoveShell(VOID);
+VOID MoveDD(VOID);
 VOID MoveCloud(VOID);
 
 HWND hMainWindow;       		/*アプリケーションウィンドウのハンドル*/
 
 int seaHeight =150;
-int waitTime = 1;
 BOOL isRun = FALSE;     		/*実行中は TRUE*/
-int FPS;
+float FPS;
 
 #define Shell_MOVE  30.
 #define Shell_W    8
@@ -35,10 +35,10 @@ int shellNum = 0;
 
 #define GUN_W  50
 #define GUN_H  10
-POINT gun = { 210 , 340 };
+POINT gun = { 190 , 400 };
 double gunAngle = 0;
 
-POINT mouse = { 300 , 400 };
+POINT mouse = { 300 , 370 };
 
 int firingTime[60];
 double firingAngle[60];
@@ -55,14 +55,21 @@ static HBITMAP hBmpShip[5];
 #define IMAGE_03 TEXT("img/aoba-03.bmp")
 #define IMAGE_04 TEXT("img/aoba-04.bmp")
 #define IMAGE_05 TEXT("img/aoba-05.bmp")
+
 typedef struct {
     HBITMAP image;
     float x;
     float y;
 } CLOUD;
 CLOUD cloud[10];
-static HBITMAP destroyer;
 #define IMAGE_06 TEXT("img/cloud.bmp")
+
+typedef struct {
+    HBITMAP image;
+    float x;
+    float y;
+} DD;
+DD dd;
 #define IMAGE_07 TEXT("img/destroyer.bmp")
 
 //-----------------------------------------------------------------
@@ -86,8 +93,8 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,PSTR lpCmdLine,
 	hMainWindow = CreateWindow(
 		APP_NAME , WND_TITLE ,
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-		CW_USEDEFAULT , CW_USEDEFAULT,
-		CW_USEDEFAULT  , CW_USEDEFAULT,
+		0 , 0,
+		GetSystemMetrics(SM_CXSCREEN)  , 400,
 		NULL , NULL , hInstance , NULL	);
 	if (hMainWindow == NULL) return 0;
 
@@ -118,7 +125,7 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		hInstance = (HINSTANCE)GetWindowLong(hWnd,GWL_HINSTANCE);
 
 		GetClientRect(hWnd, &wnd_rect);
-		gun.y = wnd_rect.bottom-seaHeight-10 +50;
+		gun.y = wnd_rect.bottom-seaHeight-10 +80;
 
 		hdc = GetDC(hWnd);
 		hWndBuffer = CreateCompatibleBitmap(hdc, wnd_rect.right, wnd_rect.bottom);
@@ -141,8 +148,9 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		for(int i=0; i<10;i++){
 			cloud[i].image = (HBITMAP)LoadImage(hInstance,IMAGE_06,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 		}
-		destroyer = (HBITMAP)LoadImage(hInstance,IMAGE_07,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-
+		dd.image = (HBITMAP)LoadImage(hInstance,IMAGE_07,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+		dd.x = wnd_rect.right+300;
+		dd.y = wnd_rect.bottom-100;
 
 		isRun = TRUE;
 		CreateThread(NULL, 0, ThreadFunc, (LPVOID)hWnd, 0, &dwThreadID);
@@ -181,7 +189,7 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		for(int i= 0; i<10;i++){
 		DeleteObject(cloud[i].image);
 		}
-		DeleteObject(destroyer);
+		DeleteObject(dd.image);
 
 			PostQuitMessage(0);
 			return 0;
@@ -194,8 +202,8 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
 	DWORD frames = 0,beforeTime;
 	srand ((unsigned) time(NULL));
 	for(int i=0; i<10;i++){
-		cloud[i].x = rand()%3000;
-		cloud[i].y = rand()%(wnd_rect.bottom-seaHeight-50);
+		cloud[i].x = rand()%wnd_rect.right;
+		cloud[i].y = rand()%(wnd_rect.bottom-seaHeight-10-10)+10;
 	}
 	for(int i =0; i<60; i++){
 		shell[i].x = gun.x;
@@ -212,11 +220,12 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
 		idealTime = (DWORD)(frames * (1000.0F / 60));
 		MoveGun();
 		MoveShell();
+		MoveDD();
 		MoveCloud();
 		InvalidateRect(hWnd , NULL , FALSE);
-		Sleep(waitTime);
+		if(idealTime > progress)Sleep(idealTime - progress);
 		if(progress>= 1000){
-			FPS = (int)frames;
+			FPS = frames;
 			beforeTime =nowTime;
 			frames = 0;
 		}
@@ -244,14 +253,14 @@ VOID MoveShell(){
 		shell[i].x = gun.x + (Shell_MOVE * cos(firingAngle[i])*t)*14.;
 		shell[i].y = gun.y + (-Shell_MOVE*sin(firingAngle[i]) * t + g*t*t/2.)*10.;
 	}
-
-
-
+}
+VOID MoveDD(){
+	dd.x -= 0.3;
 }
 
 VOID MoveCloud(){
 	for(int i=0;i<10;i++){
-		cloud[i].x -=0.1;
+		cloud[i].x -=0.1+cloud[i].y/(wnd_rect.bottom-seaHeight-10)/2;
 		if(cloud[i].x<-100){
 			cloud[i].x +=wnd_rect.right+200;
 		}
@@ -265,11 +274,11 @@ VOID Paint(HDC hdc,HDC hMemDC){
 	FillRect(hdc , &wnd_rect , (HBRUSH)GetStockObject(WHITE_BRUSH));
 
 	PaintBackground(hdc,hMemDC);
-	PaintBattleships(hdc,hMemDC,50,wnd_rect.bottom-seaHeight-10);
+	PaintBattleships(hdc,hMemDC,30,wnd_rect.bottom-seaHeight+20);
 	PaintGun(hdc);
 	PaintShell(hdc);
 	char buf[128];
-	sprintf(buf," mouse  %d %d gunAngle %0.3f FPS: %04d ",mouse.x,mouse.y,gunAngle,FPS);
+	sprintf(buf," mouse  %d %d gunAngle %0.3f FPS: %0.1f ",mouse.x,mouse.y,gunAngle,FPS);
 	TextOut(hdc,0,0,buf,strlen(buf));
 }
 
@@ -281,7 +290,7 @@ VOID PaintBackground(HDC hdc,HDC hMemDC){
 	Rectangle(hdc , 0, wnd_rect.bottom - seaHeight,wnd_rect.right, wnd_rect.bottom);
 	for(int i=0; i<10;i++){
 		SelectObject(hMemDC,cloud[i].image);
-		TransparentBlt(hdc,cloud[i].x,cloud[i].y,100,50,hMemDC,0,0,100,50,RGB(0,255,0));
+		TransparentBlt(hdc,cloud[i].x,cloud[i].y,100*cloud[i].y/(wnd_rect.bottom-seaHeight-10),50*cloud[i].y/(wnd_rect.bottom-seaHeight-10),hMemDC,0,0,100,50,RGB(0,255,0));
 	}
 }
 
@@ -294,7 +303,11 @@ VOID PaintBattleships(HDC hdc,HDC hMemDC,int x, int y){
 			SelectObject(hMemDC,hBmpShip[i]);
 		}
 	}
-	TransparentBlt(hdc,x,y,200,100,hMemDC,0,0,200,100,RGB(0,255,0));
+	TransparentBlt(hdc,x,y,200,90,hMemDC,0,0,200,100,RGB(0,255,0));
+
+	//enemy
+	SelectObject(hMemDC,dd.image);
+	TransparentBlt(hdc,dd.x,dd.y,100,100,hMemDC,0,0,100,50,RGB(0,255,0));
 }
 
 VOID PaintGun(HDC hdc)
