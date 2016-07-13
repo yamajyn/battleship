@@ -26,7 +26,7 @@ int seaHeight =150;
 BOOL isRun = FALSE;     		/*é¿çsíÜÇÕ TRUE*/
 float FPS;
 
-#define Shell_MOVE  30.
+#define Shell_MOVE  40.
 #define Shell_W    8
 #define Shell_H    5
 POINT shell[60];  	                        /* ñCíeÇÃà íuÅ@*/
