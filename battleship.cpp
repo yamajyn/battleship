@@ -10,26 +10,28 @@
 //#define WND_HEIGHT 400
 LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 DWORD WINAPI ThreadFunc(LPVOID vdParam) ;
+VOID loadImages();
 VOID Paint(HDC,HDC);
 VOID PaintBackground(HDC,HDC);
 VOID PaintBattleships(HDC,HDC,int x,int y);
 VOID PaintGun(HDC hdc);
 VOID PaintShell(HDC);
+VOID posInit();
 VOID MoveGun(VOID);
 VOID MoveShell(VOID);
 VOID MoveDD(VOID);
 VOID MoveCloud(VOID);
 
-HWND hMainWindow;       		/*ƒAƒvƒŠƒP[ƒVƒ‡ƒ“ƒEƒBƒ“ƒhƒE‚Ìƒnƒ“ƒhƒ‹*/
+HWND hMainWindow;       		/*ï¿½Aï¿½vï¿½ï¿½ï¿½Pï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½Eï¿½Bï¿½ï¿½ï¿½hï¿½Eï¿½Ìƒnï¿½ï¿½ï¿½hï¿½ï¿½*/
 
 int seaHeight =150;
-BOOL isRun = FALSE;     		/*Às’†‚Í TRUE*/
+BOOL isRun = FALSE;     		/*ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½ï¿½ TRUE*/
 float FPS;
 
 #define Shell_MOVE  40.
 #define Shell_W    8
 #define Shell_H    5
-POINT shell[60];  	                        /* –C’e‚ÌˆÊ’u@*/
+POINT shell[60];  	                        /* ï¿½Cï¿½eï¿½ÌˆÊ’uï¿½@*/
 float shell_dirx = 1., shell_diry = -1.;
 int shellNum = 0;
 
@@ -60,17 +62,19 @@ typedef struct {
     HBITMAP image;
     float x;
     float y;
-} CLOUD;
-CLOUD cloud[10];
+} Node;
+Node cloud[10];
 #define IMAGE_06 TEXT("img/cloud.bmp")
 
+Node dd;
+#define IMAGE_07 TEXT("img/destroyer.bmp")
 typedef struct {
-    HBITMAP image;
+    HBITMAP image[7];
     float x;
     float y;
-} DD;
-DD dd;
-#define IMAGE_07 TEXT("img/destroyer.bmp")
+} Effect;
+Effect wE;
+
 
 //-----------------------------------------------------------------
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,PSTR lpCmdLine, int nCmdShow){
@@ -109,7 +113,7 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	static DWORD dwThreadID;
 
-	/*ƒ_ƒuƒ‹ƒoƒbƒtƒ@ƒŠƒ“ƒO—p‚Ìƒrƒbƒgƒ}ƒbƒv‚ÆƒfƒoƒCƒXƒRƒ“ƒeƒLƒXƒg*/
+	/*ï¿½_ï¿½uï¿½ï¿½ï¿½oï¿½bï¿½tï¿½@ï¿½ï¿½ï¿½ï¿½ï¿½Oï¿½pï¿½Ìƒrï¿½bï¿½gï¿½}ï¿½bï¿½vï¿½Æƒfï¿½oï¿½Cï¿½Xï¿½Rï¿½ï¿½ï¿½eï¿½Lï¿½Xï¿½g*/
 	static HBITMAP hWndBuffer;
 	static HDC hBufferDC;
 
@@ -139,18 +143,7 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		hMemDC = CreateCompatibleDC(NULL);
 
-
-		hBmpShip[0] = (HBITMAP)LoadImage(hInstance,IMAGE_01,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-		hBmpShip[1] = (HBITMAP)LoadImage(hInstance,IMAGE_02,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-		hBmpShip[2] = (HBITMAP)LoadImage(hInstance,IMAGE_03,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-		hBmpShip[3] = (HBITMAP)LoadImage(hInstance,IMAGE_04,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-		hBmpShip[4] = (HBITMAP)LoadImage(hInstance,IMAGE_05,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-		for(int i=0; i<10;i++){
-			cloud[i].image = (HBITMAP)LoadImage(hInstance,IMAGE_06,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-		}
-		dd.image = (HBITMAP)LoadImage(hInstance,IMAGE_07,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-		dd.x = wnd_rect.right+300;
-		dd.y = wnd_rect.bottom-100;
+    loadImages(hInstance);
 
 		isRun = TRUE;
 		CreateThread(NULL, 0, ThreadFunc, (LPVOID)hWnd, 0, &dwThreadID);
@@ -197,19 +190,25 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc(hWnd , uMsg , wParam , lParam);
 }
 
+
+VOID loadImages(HINSTANCE hInstance){
+  hBmpShip[0] = (HBITMAP)LoadImage(HINSTANCE,IMAGE_01,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+  hBmpShip[1] = (HBITMAP)LoadImage(hInstance,IMAGE_02,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+  hBmpShip[2] = (HBITMAP)LoadImage(hInstance,IMAGE_03,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+  hBmpShip[3] = (HBITMAP)LoadImage(hInstance,IMAGE_04,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+  hBmpShip[4] = (HBITMAP)LoadImage(hInstance,IMAGE_05,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+  for(int i=0; i<10;i++){
+    cloud[i].image = (HBITMAP)LoadImage(hInstance,IMAGE_06,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+  }
+  dd.image = (HBITMAP)LoadImage(hInstance,IMAGE_07,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+}
+
 //-----------------------------------------------------------------
 DWORD WINAPI ThreadFunc(LPVOID vdParam){
 	DWORD frames = 0,beforeTime;
-	srand ((unsigned) time(NULL));
-	for(int i=0; i<10;i++){
-		cloud[i].x = rand()%wnd_rect.right;
-		cloud[i].y = rand()%(wnd_rect.bottom-seaHeight-10-10)+10;
-	}
-	for(int i =0; i<60; i++){
-		shell[i].x = gun.x;
-		shell[i].y = gun.y;
-		firingTime[i] = 0;
-	}
+
+  posInit();
+
 	beforeTime = timeGetTime();
 	HWND hWnd = (HWND)vdParam;
 	while(isRun)
@@ -232,6 +231,20 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
 		frames++;
 	}
 	return TRUE;
+}
+VOID posInit(){
+	srand ((unsigned) time(NULL));
+  for(int i=0; i<10;i++){
+		cloud[i].x = rand()%wnd_rect.right;
+		cloud[i].y = rand()%(wnd_rect.bottom-seaHeight-10-10)+10;
+	}
+	for(int i =0; i<60; i++){
+		shell[i].x = gun.x;
+		shell[i].y = gun.y;
+		firingTime[i] = 0;
+	}
+  dd.x = wnd_rect.right+300;
+  dd.y = wnd_rect.bottom-100;
 }
 
 VOID MoveGun(){
