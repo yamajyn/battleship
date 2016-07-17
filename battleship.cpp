@@ -16,7 +16,6 @@ VOID loadImages(HINSTANCE hInstance);
 VOID Paint(HDC,HDC);
 VOID PaintBackground(HDC,HDC);
 VOID PaintBattleships(HDC,HDC,int x,int y);
-VOID PaintGun(HDC hdc);
 VOID PaintShell(HDC);
 VOID PaintWE(HDC hdc,HDC hMemDC);
 VOID posInit();
@@ -303,7 +302,6 @@ VOID Paint(HDC hdc,HDC hMemDC){
 
     PaintBackground(hdc,hMemDC);
     PaintBattleships(hdc,hMemDC,30,wnd_rect.bottom-seaHeight+20);
-    PaintGun(hdc);
     PaintShell(hdc);
     PaintWE(hdc,hMemDC);
     for(int i=0; i<shell.size(); i++){
@@ -346,12 +344,6 @@ VOID PaintBattleships(HDC hdc,HDC hMemDC,int x, int y){
     TransparentBlt(hdc,dd.x,dd.y,100,100,hMemDC,0,0,100,50,RGB(0,255,0));
 }
 
-VOID PaintGun(HDC hdc)
-{
-    /*SelectObject(hdc , GetStockObject(BLACK_PEN));
-     SelectObject(hdc , GetStockObject(WHITE_BRUSH));
-     Rectangle(hdc , gun.x, gun.y, gun.x+GUN_W, gun.y+GUN_H);*/
-}
 
 VOID PaintShell(HDC hdc)
 {
