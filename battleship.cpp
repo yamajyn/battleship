@@ -25,16 +25,16 @@ VOID MoveShell(VOID);
 VOID MoveDD(VOID);
 VOID MoveCloud(VOID);
 
-HWND hMainWindow;       		/*?ï¿½ï¿½A?ï¿½ï¿½v?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½P?ï¿½ï¿½[?ï¿½ï¿½V?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½E?ï¿½ï¿½B?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½h?ï¿½ï¿½E?ï¿½ï¿½Ìƒn?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½h?ï¿½ï¿½?ï¿½ï¿½*/
+HWND hMainWindow;       		/*?¿½A?¿½v?¿½?¿½?¿½P?¿½[?¿½V?¿½?¿½?¿½?¿½?¿½E?¿½B?¿½?¿½?¿½h?¿½E?¿½Ìƒn?¿½?¿½?¿½h?¿½?¿½*/
 
 int seaHeight =150;
-BOOL isRun = FALSE;     		/*?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½s?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½ TRUE*/
+BOOL isRun = FALSE;     		/*?¿½?¿½?¿½s?¿½?¿½?¿½?¿½ TRUE*/
 float FPS;
 
 #define Shell_MOVE  40.
 #define Shell_W    8
 #define Shell_H    5
-/* ?ï¿½ï¿½C?ï¿½ï¿½e?ï¿½ï¿½ÌˆÊ’u?ï¿½ï¿½@*/
+/* ?¿½C?¿½e?¿½ÌˆÊ’u?¿½@*/
 
 float shell_dirx = 1., shell_diry = -1.;
 typedef struct {
@@ -68,14 +68,11 @@ typedef struct {
     HBITMAP image;
     float x;
     float y;
-    float speed;
-    int lifeTime;
 } Node;
-vector<Node> cloud;
+Node cloud[10];
 #define IMAGE_06 TEXT("img/cloud.bmp")
 
-vector<Node> dd;
-HBITMAP hBmpDD;
+Node dd;
 #define IMAGE_07 TEXT("img/destroyer.bmp")
 
 typedef struct {
@@ -84,8 +81,6 @@ typedef struct {
     float y;
     int lifeTime;
 } Effect;
-
-//water
 vector<Effect> wE;
 HBITMAP hBmpWE[7];
 #define IMAGE_08 TEXT("img/wE01.bmp")
@@ -95,16 +90,6 @@ HBITMAP hBmpWE[7];
 #define IMAGE_12 TEXT("img/wE05.bmp")
 #define IMAGE_13 TEXT("img/wE06.bmp")
 #define IMAGE_14 TEXT("img/wE07.bmp")
-
-//fire
-vector<Effect> fE;
-HBITMAP hBmpFE[6];
-#define IMAGE_15 TEXT("img/fE01.bmp")
-#define IMAGE_16 TEXT("img/fE02.bmp")
-#define IMAGE_17 TEXT("img/fE03.bmp")
-#define IMAGE_18 TEXT("img/fE04.bmp")
-#define IMAGE_19 TEXT("img/fE05.bmp")
-#define IMAGE_20 TEXT("img/fE06.bmp")
 //-----------------------------------------------------------------
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,PSTR lpCmdLine, int nCmdShow){
     WNDCLASS wc;
@@ -142,7 +127,7 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     PAINTSTRUCT ps;
     static DWORD dwThreadID;
 
-    /*?ï¿½ï¿½_?ï¿½ï¿½u?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½o?ï¿½ï¿½b?ï¿½ï¿½t?ï¿½ï¿½@?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½O?ï¿½ï¿½p?ï¿½ï¿½Ìƒr?ï¿½ï¿½b?ï¿½ï¿½g?ï¿½ï¿½}?ï¿½ï¿½b?ï¿½ï¿½v?ï¿½ï¿½Æƒf?ï¿½ï¿½o?ï¿½ï¿½C?ï¿½ï¿½X?ï¿½ï¿½R?ï¿½ï¿½?ï¿½ï¿½?ï¿½ï¿½e?ï¿½ï¿½L?ï¿½ï¿½X?ï¿½ï¿½g*/
+    /*?¿½_?¿½u?¿½?¿½?¿½o?¿½b?¿½t?¿½@?¿½?¿½?¿½?¿½?¿½O?¿½p?¿½Ìƒr?¿½b?¿½g?¿½}?¿½b?¿½v?¿½Æƒf?¿½o?¿½C?¿½X?¿½R?¿½?¿½?¿½e?¿½L?¿½X?¿½g*/
     static HBITMAP hWndBuffer;
     static HDC hBufferDC;
 
@@ -208,6 +193,10 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             for(int i =0; i<5; i++){
                 DeleteObject(hBmpShip[i]);
             }
+            for(int i= 0; i<10;i++){
+                DeleteObject(cloud[i].image);
+            }
+            DeleteObject(dd.image);
 
             PostQuitMessage(0);
             return 0;
@@ -225,8 +214,7 @@ VOID loadImages(HINSTANCE hInstance){
     for(int i=0; i<10;i++){
         cloud[i].image = (HBITMAP)LoadImage(hInstance,IMAGE_06,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     }
-    hBmpDD = (HBITMAP)LoadImage(hInstance,IMAGE_07,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-
+    dd.image = (HBITMAP)LoadImage(hInstance,IMAGE_07,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     hBmpWE[0] = (HBITMAP)LoadImage(hInstance,IMAGE_08,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     hBmpWE[1] = (HBITMAP)LoadImage(hInstance,IMAGE_09,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     hBmpWE[2] = (HBITMAP)LoadImage(hInstance,IMAGE_10,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
@@ -234,13 +222,6 @@ VOID loadImages(HINSTANCE hInstance){
     hBmpWE[4] = (HBITMAP)LoadImage(hInstance,IMAGE_12,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     hBmpWE[5] = (HBITMAP)LoadImage(hInstance,IMAGE_13,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     hBmpWE[6] = (HBITMAP)LoadImage(hInstance,IMAGE_14,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-
-    hBmpFE[0] = (HBITMAP)LoadImage(hInstance,IMAGE_15,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-    hBmpFE[1] = (HBITMAP)LoadImage(hInstance,IMAGE_16,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-    hBmpFE[2] = (HBITMAP)LoadImage(hInstance,IMAGE_17,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-    hBmpFE[3] = (HBITMAP)LoadImage(hInstance,IMAGE_18,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-    hBmpFE[4] = (HBITMAP)LoadImage(hInstance,IMAGE_19,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-    hBmpFE[5] = (HBITMAP)LoadImage(hInstance,IMAGE_20,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 }
 
 //-----------------------------------------------------------------
@@ -278,9 +259,8 @@ VOID posInit(){
         cloud[i].x = rand()%wnd_rect.right;
         cloud[i].y = rand()%(wnd_rect.bottom-seaHeight-10-150)+150;
     }
-
-    Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,1000,1};
-    dd.push_back(node);
+    dd.x = wnd_rect.right+300;
+    dd.y = wnd_rect.bottom-100;
 }
 
 VOID MoveGun(){
@@ -302,16 +282,8 @@ VOID MoveShell(){
         shell[i].y = gun.y + (-Shell_MOVE*sin(shell[i].firingAngle) * t + g*t*t/2.)*10.;
     }
 }
-VOID Move(){
-
-  //dd
-  for(int i=0; i<dd.size(); i++){
-    dd[i].x -= dd[i].speed;
-    dd[i].lifeTime -=1;
-    if(dd[i].lifeTime<0){
-      dd[i].erase(dd.begin()+i);
-    }
-  }
+VOID MoveDD(){
+    dd.x -= 0.3;
 }
 
 VOID MoveCloud(){
@@ -370,10 +342,8 @@ VOID PaintBattleships(HDC hdc,HDC hMemDC,int x, int y){
     TransparentBlt(hdc,x,y,200,90,hMemDC,0,0,200,100,RGB(0,255,0));
 
     //enemy
-    for(int i=0; i<dd.size(); i++){
-      SelectObject(hMemDC,dd[i].image);
-      TransparentBlt(hdc,dd[i].x,dd[i].y,100,100,hMemDC,0,0,100,50,RGB(0,255,0));
-    }
+    SelectObject(hMemDC,dd.image);
+    TransparentBlt(hdc,dd.x,dd.y,100,100,hMemDC,0,0,100,50,RGB(0,255,0));
 }
 
 VOID PaintGun(HDC hdc)
