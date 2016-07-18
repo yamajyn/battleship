@@ -77,6 +77,7 @@ Node cloud[10];
 vector<Node> dd;
 HBITMAP hBmpDD;
 #define IMAGE_07 TEXT("img/destroyer.bmp")
+int interval = 2000;
 
 typedef struct {
     HBITMAP image;
@@ -161,8 +162,6 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             hInstance = (HINSTANCE)GetWindowLong(hWnd,GWL_HINSTANCE);
 
             GetClientRect(hWnd, &wnd_rect);
-            gun.y = wnd_rect.bottom-seaHeight-10 +80;
-
             hdc = GetDC(hWnd);
             hWndBuffer = CreateCompatibleBitmap(hdc, wnd_rect.right, wnd_rect.bottom);
             hBufferDC = CreateCompatibleDC(hdc);
@@ -177,7 +176,6 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
             loadImages(hInstance);
 
-
             isRun = TRUE;
             CreateThread(NULL, 0, ThreadFunc, (LPVOID)hWnd, 0, &dwThreadID);
             return 0;
@@ -190,9 +188,12 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_LBUTTONUP:
 
             shell.push_back(a);
-            //firingTime[shellNum] = clock();
-            //firingAngle[shellNum] = gunAngle;
+
             return 0;
+        case WM_KEYDOWN:
+            if (GetKeyState(VK_ESCAPE) < 0) {
+              DestroyWindow(hWnd);
+            }
 
         case WM_PAINT:
 
@@ -229,7 +230,7 @@ VOID loadImages(HINSTANCE hInstance){
         cloud[i].image = (HBITMAP)LoadImage(hInstance,IMAGE_06,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     }
     hBmpDD = (HBITMAP)LoadImage(hInstance,IMAGE_07,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-    Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,0.5,10000};
+    Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,0.5,5};
     dd.push_back(node);
 
     hBmpWE[0] = (HBITMAP)LoadImage(hInstance,IMAGE_08,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
@@ -274,17 +275,18 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
             frames = 0;
         }
         frames++;
+        interval--;
     }
     return TRUE;
 }
 VOID posInit(){
-    srand ((unsigned) time(NULL));
-    for(int i=0; i<10;i++){
-        cloud[i].x = rand()%wnd_rect.right;
-        cloud[i].y = rand()%(wnd_rect.bottom-seaHeight-10-150)+150;
-    }
+  gun.y = wnd_rect.bottom-seaHeight-10 +80;
 
-
+  srand ((unsigned) time(NULL));
+  for(int i=0; i<10;i++){
+      cloud[i].x = rand()%wnd_rect.right;
+      cloud[i].y = rand()%(wnd_rect.bottom-seaHeight-10-180)+180;
+  }
 }
 
 VOID MoveGun(){
@@ -292,14 +294,14 @@ VOID MoveGun(){
         gunAngle = atan2(-(mouse.y-gun.y),mouse.x-gun.x);
         if(gunAngle>0.785){
             gunAngle = 0.785;
-        }else if(gunAngle <0){
-            gunAngle = 0;
+        }else if(gunAngle <-0.17){
+            gunAngle = -0.17;
         }
     }
 }
 VOID MoveShell(){
     double g = 9.8;
-    for(int i = 0; i<shell.size(); i++){
+    for(unsigned int i = 0; i<shell.size(); i++){
         double now = clock();
         double t = double(now - shell[i].firingTime)/1000.;
         shell[i].x = gun.x + (Shell_MOVE * cos(shell[i].firingAngle)*t)*14.;
@@ -309,21 +311,29 @@ VOID MoveShell(){
 VOID MoveDD(){
 
   //dd
-  for(int i=0; i<dd.size(); i++){
+  for(unsigned int i=0; i<dd.size(); i++){
     dd[i].x -= dd[i].speed;
-    dd[i].life -=1;
-    if(dd[i].life<0){
-      dd.erase(dd.begin()+i);
-    }else if(dd[i].life==40){
-      Effect fx = {hBmpFE[0],dd[i].x-60,dd[i].y-40,200,200,60};
+    //dd[i].life -=1;
+    if(dd[i].life<=0){
+      Effect fx = {hBmpFE[0],dd[i].x-20,dd[i].y+40,60,60,60};
+      Effect fx2 = {hBmpFE[0],dd[i].x-10,dd[i].y+15,100,100,60};
+      Effect fx3 = {hBmpFE[0],dd[i].x+40,dd[i].y+40,70,70,60};
       fE.push_back(fx);
+      fE.push_back(fx2);
+      fE.push_back(fx3);
+      dd.erase(dd.begin()+i);
     }
+  }
+  if(interval<=0){
+    Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,0.5,5};
+    dd.push_back(node);
+    interval+=2000;
   }
 }
 
 VOID MoveCloud(){
     for(int i=0;i<10;i++){
-        cloud[i].x -=0.1+cloud[i].y/(wnd_rect.bottom-seaHeight-10)/2;
+        cloud[i].x -=0.1+(cloud[i].y-160)/(wnd_rect.bottom-seaHeight-10-120);
         if(cloud[i].x<-100){
             cloud[i].x +=wnd_rect.right+200;
         }
@@ -341,14 +351,14 @@ VOID Paint(HDC hdc,HDC hMemDC){
     PaintShell(hdc);
     PaintWE(hdc,hMemDC);
     PaintFE(hdc,hMemDC);
-    for(int i=0; i<shell.size(); i++){
-        if(shell[i].y>wnd_rect.bottom-70){
-          Effect a = {hBmpWE[0],shell[i].x,wnd_rect.bottom-120,30,50,70};
+    for(unsigned int i=0; i<shell.size(); i++){
+        if(shell[i].y>wnd_rect.bottom-60){
+          Effect a = {hBmpWE[0],shell[i].x,wnd_rect.bottom-110,30,50,70};
           wE.push_back(a);
-          for(int j=0;j<dd.size(); j++){
-            if(dd[j].x-20<shell[i].x && shell[i].x<dd[j].x+100){
-              Effect fx = {hBmpFE[0],shell[i].x-40,shell[i].y-20,50,50,60};
-              //dd.erase(dd.begin()+j);
+          for(unsigned int j=0;j<dd.size(); j++){
+            if(dd[j].x-10<shell[i].x && shell[i].x<dd[j].x+100){
+              Effect fx = {hBmpFE[0],shell[i].x-40,shell[i].y-30,50,50,60};
+              dd[j].life--;
               fE.push_back(fx);
               wE.pop_back();
             }
@@ -369,7 +379,10 @@ VOID PaintBackground(HDC hdc,HDC hMemDC){
     Rectangle(hdc , 0, wnd_rect.bottom - seaHeight,wnd_rect.right, wnd_rect.bottom);
     for(int i=0; i<10;i++){
         SelectObject(hMemDC,cloud[i].image);
-        TransparentBlt(hdc,cloud[i].x,cloud[i].y,100*(cloud[i].y-40)/(wnd_rect.bottom-seaHeight-10),50*(cloud[i].y-40)/(wnd_rect.bottom-seaHeight-10),hMemDC,0,0,100,50,RGB(0,255,0));
+        TransparentBlt(hdc,cloud[i].x,cloud[i].y,
+          100*(cloud[i].y-150)/(wnd_rect.bottom-seaHeight-10-150),
+          50*(cloud[i].y-150)/(wnd_rect.bottom-seaHeight-10-150),
+          hMemDC,0,0,100,50,RGB(0,255,0));
     }
 }
 
@@ -386,7 +399,7 @@ VOID PaintBattleships(HDC hdc,HDC hMemDC,int x, int y){
 
     //enemy
 
-    for(int i=0; i<dd.size(); i++){
+    for(unsigned int i=0; i<dd.size(); i++){
       SelectObject(hMemDC,dd[i].image);
       TransparentBlt(hdc,dd[i].x,dd[i].y,100,100,hMemDC,0,0,100,50,RGB(0,255,0));
     }
@@ -397,12 +410,12 @@ VOID PaintShell(HDC hdc)
 {
     SelectObject(hdc , GetStockObject(NULL_PEN));
     SelectObject(hdc , GetStockObject(BLACK_BRUSH));
-    for(int i = 0; i<shell.size(); i++){
+    for(unsigned int i = 0; i<shell.size(); i++){
         Rectangle(hdc , shell[i].x , shell[i].y , shell[i].x + Shell_W, shell[i].y + Shell_H);
     }
 }
 VOID PaintWE(HDC hdc,HDC hMemDC){
-  for(int i=0; i<wE.size(); i++){
+  for(unsigned int i=0; i<wE.size(); i++){
     for(int j=0; j<7;j++){
       if(wE[i].life>=(6-j)*10 && wE[i].life<=(7-j)*10){
         SelectObject(hMemDC,wE[i].image);
@@ -417,7 +430,7 @@ VOID PaintWE(HDC hdc,HDC hMemDC){
   }
 }
 VOID PaintFE(HDC hdc,HDC hMemDC){
-  for(int i=0; i<fE.size(); i++){
+  for(unsigned int i=0; i<fE.size(); i++){
     for(int j=0; j<6;j++){
       if(fE[i].life>=(5-j)*10 && fE[i].life<=(6-j)*10){
         SelectObject(hMemDC,fE[i].image);
