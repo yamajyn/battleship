@@ -145,6 +145,10 @@ HBITMAP hBmpFE[6];
 #define IMAGE_19 TEXT("img/fE05.bmp")
 #define IMAGE_20 TEXT("img/fE06.bmp")
 
+//heart
+HBITMAP hbmpHP;
+HBITMAP hbmpGameover;
+
 HBITMAP font[10];
 //-----------------------------------------------------------------
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,PSTR lpCmdLine, int nCmdShow){
@@ -226,13 +230,16 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return 0;
 
         case WM_LBUTTONUP:
-
-            shell.push_back(a);
+            if(playerLife>0){
+              shell.push_back(a);
+            }
 
             return 0;
         case WM_RBUTTONUP:
-            b.expX = mouse.x;
-            shell2.push_back(b);
+            if(playerLife>0){
+              b.expX = mouse.x;
+              shell2.push_back(b);
+            }
 
             return 0;
         case WM_KEYDOWN:
@@ -305,6 +312,8 @@ VOID loadImages(HINSTANCE hInstance){
     font[8] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f8.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     font[9] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f9.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 
+    hbmpGameover = (HBITMAP)LoadImage(hInstance,TEXT("img/font/gameover.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    hbmpHP = (HBITMAP)LoadImage(hInstance,TEXT("img/heart.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 }
 
 //-----------------------------------------------------------------
@@ -385,7 +394,7 @@ VOID Collision(){
   //bomb
   for(unsigned int i=0; i<bomb.size(); i++){
     if(bomb[i].y>290){
-      Effect fx = {hBmpFE[0],bomb[i].x-20,bomb[i].y-30,50,50,60};
+      Effect fx = {hBmpFE[0],bomb[i].x-20,bomb[i].y-30,80*(4-playerLife)/4,80*(4-playerLife)/4,60};
       fE.push_back(fx);
       bomb.erase(bomb.begin()+i);
       playerLife--;
@@ -401,7 +410,9 @@ VOID Collision(){
           if(shell2[i].y>aircraft[j].y-20 && shell2[i].y<aircraft[j].y+20){
             Effect fx2 = {hBmpFE[0],shell2[i].x-30,shell2[i].y-30,40,40,60};
             fE.push_back(fx2);
-            aircraft[j].life--;
+            if(playerLife>0){
+              aircraft[j].life--;
+            }
           }
         }
       }
@@ -445,7 +456,10 @@ VOID MoveDD(){
   //dd
   for(unsigned int i=0; i<dd.size(); i++){
     dd[i].x -= dd[i].speed;
-    //dd[i].life -=1;
+    if(dd[i].x<265){
+      playerLife=0;
+
+    }
     if(dd[i].life<=0){
       Effect fx = {hBmpFE[0],dd[i].x-20,dd[i].y+40,60,60,60};
       Effect fx2 = {hBmpFE[0],dd[i].x-10,dd[i].y+15,100,100,60};
@@ -472,9 +486,13 @@ VOID MoveAircraft(){
       fE.push_back(fx);
       aircraft.erase(aircraft.begin()+i);
       score+=30;
+      break;
     }else if(aircraft[i].x==260){
       Bomb bom = {aircraft[i].x,aircraft[i].y+5,aircraft[i].x,aircraft[i].y+5,clock(),3.14};
       bomb.push_back(bom);
+    }
+    if(aircraft[i].x<-100){
+      aircraft.erase(aircraft.begin()+i);
     }
   }
   if(interval2<=0){
@@ -627,6 +645,16 @@ VOID PaintScore(HDC hdc,HDC hMemDC){
               break;
     }
     SelectObject(hMemDC,font[n]);
-    TransparentBlt(hdc,30+i*17,10,13,15,hMemDC,0,0,7,7,RGB(0,0,255));
+    TransparentBlt(hdc,30+i*16,10,15,15,hMemDC,0,0,7,7,RGB(0,0,255));
+  }
+  for(int i=0; i<playerLife; i++){
+    SelectObject(hMemDC,hbmpHP);
+    TransparentBlt(hdc,wnd_rect.right-60+i*17,10,15,15,hMemDC,0,0,7,7,RGB(0,255,0));
+  }
+  if(playerLife<=0){
+    SelectObject(hMemDC,hbmpGameover);
+    TransparentBlt(hdc,wnd_rect.right/2-128,wnd_rect.bottom/2-14,256,28,hMemDC,0,0,64,7,RGB(0,255,0));
+    Effect fx = {hBmpFE[0],160-50,280-50,100,100,60};
+    fE.push_back(fx);
   }
 }
