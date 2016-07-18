@@ -19,7 +19,9 @@ VOID PaintBattleships(HDC,HDC,int x,int y);
 VOID PaintShell(HDC);
 VOID PaintWE(HDC hdc,HDC hMemDC);
 VOID PaintFE(HDC hdc,HDC hMemDC);
+VOID PaintScore(HDC hdc,HDC hMemDC);
 VOID posInit();
+VOID Collision();
 VOID MoveGun(VOID);
 VOID MoveShell(VOID);
 VOID MoveDD(VOID);
@@ -30,11 +32,15 @@ HWND hMainWindow;       		/*??¿½?¿½A??¿½?¿½v??¿½?¿½??¿½?¿½??¿½?¿½P??¿½?¿½[??¿½?¿
 int seaHeight =150;
 BOOL isRun = FALSE;     		/*??¿½?¿½??¿½?¿½??¿½?¿½s??¿½?¿½??¿½?¿½??¿½?¿½??¿½?¿½ TRUE*/
 float FPS;
+int score = 0;
 
 #define Shell_MOVE  40.
-#define Shell_W    8
-#define Shell_H    5
-/* ??¿½?¿½C??¿½?¿½e??¿½?¿½ÌˆÊ’u??¿½?¿½@*/
+#define Shell_W    7
+#define Shell_H    4
+
+#define Shell2_MOVE  80.
+#define Shell2_W    5
+#define Shell2_H    3
 
 float shell_dirx = 1., shell_diry = -1.;
 typedef struct {
@@ -44,6 +50,14 @@ typedef struct {
     double firingAngle;
 } Shell;
 vector<Shell> shell;
+typedef struct {
+    int x;
+    int y;
+    int firingTime;
+    double firingAngle;
+    int expX;
+} Shell2;
+vector<Shell2> shell2;
 
 #define GUN_W  50
 #define GUN_H  10
@@ -57,6 +71,7 @@ RECT wnd_rect;
 static HBRUSH hBrushRed;
 static HBRUSH hBrushSky;
 static HBRUSH hBrushSea;
+static HBRUSH hBrushShell2;
 static HBITMAP hBmpShip[5];
 #define IMAGE_01 TEXT("img/aoba-01.bmp")
 #define IMAGE_02 TEXT("img/aoba-02.bmp")
@@ -108,6 +123,8 @@ HBITMAP hBmpFE[6];
 #define IMAGE_18 TEXT("img/fE04.bmp")
 #define IMAGE_19 TEXT("img/fE05.bmp")
 #define IMAGE_20 TEXT("img/fE06.bmp")
+
+HBITMAP font[10];
 //-----------------------------------------------------------------
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,PSTR lpCmdLine, int nCmdShow){
     WNDCLASS wc;
@@ -152,7 +169,8 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     static HDC hMemDC;
     static HINSTANCE hInstance;
-    Shell a = {gun.x,gun.y,clock(),gunAngle};
+    Shell a = {0,0,clock(),gunAngle};
+    Shell2 b = {0,0,clock(),gunAngle,0};
 
     switch(uMsg) {
 
@@ -171,6 +189,7 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             hBrushRed = CreateSolidBrush(RGB(255,0,0));
             hBrushSky = CreateSolidBrush(RGB(102,160,255));
             hBrushSea = CreateSolidBrush(RGB(60,50,255));
+            hBrushShell2  =CreateSolidBrush(RGB(255,239,159));
 
             hMemDC = CreateCompatibleDC(NULL);
 
@@ -188,6 +207,11 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_LBUTTONUP:
 
             shell.push_back(a);
+
+            return 0;
+        case WM_RBUTTONUP:
+            b.expX = mouse.x;
+            shell2.push_back(b);
 
             return 0;
         case WM_KEYDOWN:
@@ -247,6 +271,18 @@ VOID loadImages(HINSTANCE hInstance){
     hBmpFE[3] = (HBITMAP)LoadImage(hInstance,IMAGE_18,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     hBmpFE[4] = (HBITMAP)LoadImage(hInstance,IMAGE_19,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     hBmpFE[5] = (HBITMAP)LoadImage(hInstance,IMAGE_20,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+
+    font[0] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f0.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    font[1] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f1.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    font[2] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f2.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    font[3] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f3.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    font[4] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f4.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    font[5] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f5.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    font[6] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f6.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    font[7] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f7.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    font[8] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f8.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    font[9] = (HBITMAP)LoadImage(hInstance,TEXT("img/font/f9.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+
 }
 
 //-----------------------------------------------------------------
@@ -263,6 +299,7 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
         nowTime = timeGetTime();
         progress = nowTime - beforeTime;
         idealTime = (DWORD)(frames * (1000.0F / 60));
+        Collision();
         MoveGun();
         MoveShell();
         MoveDD();
@@ -289,6 +326,32 @@ VOID posInit(){
   }
 }
 
+VOID Collision(){
+  for(unsigned int i=0; i<shell.size(); i++){
+    if(shell[i].y>wnd_rect.bottom-60){
+        Effect a = {hBmpWE[0],shell[i].x,wnd_rect.bottom-110,30,50,70};
+        wE.push_back(a);
+        for(unsigned int j=0;j<dd.size(); j++){
+          if(dd[j].x-10<shell[i].x && shell[i].x<dd[j].x+100){
+            Effect fx = {hBmpFE[0],shell[i].x-40,shell[i].y-30,50,50,60};
+            dd[j].life--;
+            score+=10;
+            fE.push_back(fx);
+            wE.pop_back();
+          }
+        }
+        shell.erase(shell.begin()+i);
+      }
+  }
+  for(unsigned int i=0; i<shell2.size(); i++){
+    if(shell2[i].x>shell2[i].expX){
+      Effect fx = {hBmpFE[0],shell2[i].x-30,shell2[i].y-30,30,30,60};
+      fE.push_back(fx);
+      shell2.erase(shell2.begin()+i);
+    }
+  }
+}
+
 VOID MoveGun(){
     if(mouse.x!=gun.x){
         gunAngle = atan2(-(mouse.y-gun.y),mouse.x-gun.x);
@@ -307,6 +370,13 @@ VOID MoveShell(){
         shell[i].x = gun.x + (Shell_MOVE * cos(shell[i].firingAngle)*t)*14.;
         shell[i].y = gun.y + (-Shell_MOVE*sin(shell[i].firingAngle) * t + g*t*t/2.)*10.;
     }
+    g = 0.0;
+    for(unsigned int i = 0; i<shell2.size(); i++){
+        double now = clock();
+        double t = double(now - shell2[i].firingTime)/1000.;
+        shell2[i].x = gun.x-6 + (Shell2_MOVE * cos(shell2[i].firingAngle)*t)*14.;
+        shell2[i].y = gun.y-7 + (-Shell2_MOVE*sin(shell2[i].firingAngle) * t + g*t*t/2.)*10.;
+    }
 }
 VOID MoveDD(){
 
@@ -322,6 +392,7 @@ VOID MoveDD(){
       fE.push_back(fx2);
       fE.push_back(fx3);
       dd.erase(dd.begin()+i);
+      score+=100;
     }
   }
   if(interval<=0){
@@ -333,7 +404,7 @@ VOID MoveDD(){
 
 VOID MoveCloud(){
     for(int i=0;i<10;i++){
-        cloud[i].x -=0.1+(cloud[i].y-160)/(wnd_rect.bottom-seaHeight-10-120);
+        cloud[i].x -=0.1+(cloud[i].y-170)/(wnd_rect.bottom-seaHeight-10-120);
         if(cloud[i].x<-100){
             cloud[i].x +=wnd_rect.right+200;
         }
@@ -351,24 +422,11 @@ VOID Paint(HDC hdc,HDC hMemDC){
     PaintShell(hdc);
     PaintWE(hdc,hMemDC);
     PaintFE(hdc,hMemDC);
-    for(unsigned int i=0; i<shell.size(); i++){
-        if(shell[i].y>wnd_rect.bottom-60){
-          Effect a = {hBmpWE[0],shell[i].x,wnd_rect.bottom-110,30,50,70};
-          wE.push_back(a);
-          for(unsigned int j=0;j<dd.size(); j++){
-            if(dd[j].x-10<shell[i].x && shell[i].x<dd[j].x+100){
-              Effect fx = {hBmpFE[0],shell[i].x-40,shell[i].y-30,50,50,60};
-              dd[j].life--;
-              fE.push_back(fx);
-              wE.pop_back();
-            }
-          }
-          shell.erase(shell.begin()+i);
-        }
-    }
+
+    PaintScore(hdc,hMemDC);
     char buf[128];
-    sprintf(buf," mouse  %d %d gunAngle %0.3f FPS: %0.1f ",mouse.x,mouse.y,gunAngle,FPS);
-    TextOut(hdc,0,0,buf,strlen(buf));
+    sprintf(buf," mouse  %d %d gunAngle %0.3f Score: %d ",mouse.x,mouse.y,gunAngle,score);
+    TextOut(hdc,200,0,buf,strlen(buf));
 }
 
 VOID PaintBackground(HDC hdc,HDC hMemDC){
@@ -413,6 +471,10 @@ VOID PaintShell(HDC hdc)
     for(unsigned int i = 0; i<shell.size(); i++){
         Rectangle(hdc , shell[i].x , shell[i].y , shell[i].x + Shell_W, shell[i].y + Shell_H);
     }
+    SelectObject(hdc , hBrushShell2);
+    for(unsigned int i = 0; i<shell2.size(); i++){
+        Rectangle(hdc , shell2[i].x , shell2[i].y , shell2[i].x + Shell2_W, shell2[i].y + Shell2_H);
+    }
 }
 VOID PaintWE(HDC hdc,HDC hMemDC){
   for(unsigned int i=0; i<wE.size(); i++){
@@ -442,5 +504,27 @@ VOID PaintFE(HDC hdc,HDC hMemDC){
     if(fE[i].life<0){
       fE.erase(fE.begin()+i);
     }
+  }
+}
+
+VOID PaintScore(HDC hdc,HDC hMemDC){
+  int n=0;
+  for(int i=0; i<6; i++){
+    switch (i) {
+      case 0: n=score/100000;
+              break;
+      case 1: n=score%100000/10000;
+              break;
+      case 2: n=score%10000/1000;
+              break;
+      case 3: n=score%1000/100;
+              break;
+      case 4: n=score%100/10;
+              break;
+      case 5: n=score%10;
+              break;
+    }
+    SelectObject(hMemDC,font[n]);
+    TransparentBlt(hdc,30+i*17,10,13,15,hMemDC,0,0,7,7,RGB(0,0,255));
   }
 }
