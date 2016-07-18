@@ -25,6 +25,7 @@ VOID Collision();
 VOID MoveGun(VOID);
 VOID MoveShell(VOID);
 VOID MoveDD(VOID);
+VOID MoveAircraft(VOID);
 VOID MoveCloud(VOID);
 
 HWND hMainWindow;       		/*??¿½?¿½A??¿½?¿½v??¿½?¿½??¿½?¿½??¿½?¿½P??¿½?¿½[??¿½?¿½V??¿½?¿½??¿½?¿½??¿½?¿½??¿½?¿½??¿½?¿½E??¿½?¿½B??¿½?¿½??¿½?¿½??¿½?¿½h??¿½?¿½E??¿½?¿½Ìƒn??¿½?¿½??¿½?¿½??¿½?¿½h??¿½?¿½??¿½?¿½*/
@@ -33,6 +34,7 @@ int seaHeight =150;
 BOOL isRun = FALSE;     		/*??¿½?¿½??¿½?¿½??¿½?¿½s??¿½?¿½??¿½?¿½??¿½?¿½??¿½?¿½ TRUE*/
 float FPS;
 int score = 0;
+int playerLife = 3;
 
 #define Shell_MOVE  40.
 #define Shell_W    7
@@ -50,6 +52,17 @@ typedef struct {
     double firingAngle;
 } Shell;
 vector<Shell> shell;
+
+#define BOMB_MOVE  5.
+typedef struct {
+    int x;
+    int y;
+    int sx;
+    int sy;
+    int firingTime;
+    double firingAngle;
+} Bomb;
+vector<Bomb> bomb;
 typedef struct {
     int x;
     int y;
@@ -86,6 +99,8 @@ typedef struct {
     float speed;
     int life;
 } Node;
+
+
 Node cloud[10];
 #define IMAGE_06 TEXT("img/cloud.bmp")
 
@@ -93,6 +108,12 @@ vector<Node> dd;
 HBITMAP hBmpDD;
 #define IMAGE_07 TEXT("img/destroyer.bmp")
 int interval = 2000;
+
+vector<Node> aircraft;
+HBITMAP hBmpAircraft;
+int interval2 = 1300;
+
+
 
 typedef struct {
     HBITMAP image;
@@ -253,9 +274,10 @@ VOID loadImages(HINSTANCE hInstance){
     for(int i=0; i<10;i++){
         cloud[i].image = (HBITMAP)LoadImage(hInstance,IMAGE_06,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     }
+
     hBmpDD = (HBITMAP)LoadImage(hInstance,IMAGE_07,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-    Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,0.5,5};
-    dd.push_back(node);
+
+    hBmpAircraft = (HBITMAP)LoadImage(hInstance,TEXT("img/aircraft.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 
     hBmpWE[0] = (HBITMAP)LoadImage(hInstance,IMAGE_08,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     hBmpWE[1] = (HBITMAP)LoadImage(hInstance,IMAGE_09,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
@@ -303,6 +325,7 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
         MoveGun();
         MoveShell();
         MoveDD();
+        MoveAircraft();
         MoveCloud();
         InvalidateRect(hWnd , NULL , FALSE);
         if(idealTime > progress)Sleep(idealTime - progress);
@@ -313,11 +336,26 @@ DWORD WINAPI ThreadFunc(LPVOID vdParam){
         }
         frames++;
         interval--;
+        interval2--;
     }
     return TRUE;
 }
 VOID posInit(){
   gun.y = wnd_rect.bottom-seaHeight-10 +80;
+
+  Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,0.5,5};
+  dd.push_back(node);
+
+  Node ac1 ={hBmpAircraft,wnd_rect.right+600,150,1,1};
+  Node ac2 ={hBmpAircraft,wnd_rect.right+615,160,1,1};
+  Node ac3 ={hBmpAircraft,wnd_rect.right+630,170,1,1};
+  Node ac4 ={hBmpAircraft,wnd_rect.right+645,180,1,1};
+  Node ac5 ={hBmpAircraft,wnd_rect.right+660,190,1,1};
+  aircraft.push_back(ac1);
+  aircraft.push_back(ac2);
+  aircraft.push_back(ac3);
+  aircraft.push_back(ac4);
+  aircraft.push_back(ac5);
 
   srand ((unsigned) time(NULL));
   for(int i=0; i<10;i++){
@@ -327,6 +365,7 @@ VOID posInit(){
 }
 
 VOID Collision(){
+  //playerShell
   for(unsigned int i=0; i<shell.size(); i++){
     if(shell[i].y>wnd_rect.bottom-60){
         Effect a = {hBmpWE[0],shell[i].x,wnd_rect.bottom-110,30,50,70};
@@ -343,10 +382,29 @@ VOID Collision(){
         shell.erase(shell.begin()+i);
       }
   }
+  //bomb
+  for(unsigned int i=0; i<bomb.size(); i++){
+    if(bomb[i].y>290){
+      Effect fx = {hBmpFE[0],bomb[i].x-20,bomb[i].y-30,50,50,60};
+      fE.push_back(fx);
+      bomb.erase(bomb.begin()+i);
+      playerLife--;
+    }
+  }
+  //shell2
   for(unsigned int i=0; i<shell2.size(); i++){
     if(shell2[i].x>shell2[i].expX){
-      Effect fx = {hBmpFE[0],shell2[i].x-30,shell2[i].y-30,30,30,60};
+      Effect fx = {hBmpFE[0],shell2[i].x-30,shell2[i].y-30,25,25,60};
       fE.push_back(fx);
+      for(unsigned int j=0; j<aircraft.size(); j++){
+        if(shell2[i].x>aircraft[j].x-20 && shell2[i].x<aircraft[j].x+20){
+          if(shell2[i].y>aircraft[j].y-20 && shell2[i].y<aircraft[j].y+20){
+            Effect fx2 = {hBmpFE[0],shell2[i].x-30,shell2[i].y-30,40,40,60};
+            fE.push_back(fx2);
+            aircraft[j].life--;
+          }
+        }
+      }
       shell2.erase(shell2.begin()+i);
     }
   }
@@ -364,18 +422,22 @@ VOID MoveGun(){
 }
 VOID MoveShell(){
     double g = 9.8;
+    double now = clock();
     for(unsigned int i = 0; i<shell.size(); i++){
-        double now = clock();
         double t = double(now - shell[i].firingTime)/1000.;
         shell[i].x = gun.x + (Shell_MOVE * cos(shell[i].firingAngle)*t)*14.;
         shell[i].y = gun.y + (-Shell_MOVE*sin(shell[i].firingAngle) * t + g*t*t/2.)*10.;
     }
+    for(unsigned int i = 0; i<bomb.size(); i++){
+        double t = double(now - bomb[i].firingTime)/1000.;
+        bomb[i].x = bomb[i].sx + (BOMB_MOVE * cos(bomb[i].firingAngle)*t)*14.;
+        bomb[i].y = bomb[i].sy + (g*t*t/2.)*10.;
+    }
     g = 0.0;
     for(unsigned int i = 0; i<shell2.size(); i++){
-        double now = clock();
         double t = double(now - shell2[i].firingTime)/1000.;
-        shell2[i].x = gun.x-6 + (Shell2_MOVE * cos(shell2[i].firingAngle)*t)*14.;
-        shell2[i].y = gun.y-7 + (-Shell2_MOVE*sin(shell2[i].firingAngle) * t + g*t*t/2.)*10.;
+        shell2[i].x = gun.x-6. + (Shell2_MOVE * cos(shell2[i].firingAngle)*t)*14.;
+        shell2[i].y = gun.y-7. + (-Shell2_MOVE*sin(shell2[i].firingAngle) * t + g*t*t/2.)*10.;
     }
 }
 VOID MoveDD(){
@@ -399,6 +461,37 @@ VOID MoveDD(){
     Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,0.5,5};
     dd.push_back(node);
     interval+=2000;
+  }
+}
+
+VOID MoveAircraft(){
+  for(unsigned int i=0; i<aircraft.size(); i++){
+    aircraft[i].x -= aircraft[i].speed;
+    if(aircraft[i].life<=0){
+      Effect fx = {hBmpFE[0],aircraft[i].x,aircraft[i].y,30,30,60};
+      fE.push_back(fx);
+      aircraft.erase(aircraft.begin()+i);
+      score+=30;
+    }else if(aircraft[i].x==260){
+      Bomb bom = {aircraft[i].x,aircraft[i].y+5,aircraft[i].x,aircraft[i].y+5,clock(),3.14};
+      bomb.push_back(bom);
+    }
+  }
+  if(interval2<=0){
+    srand ((unsigned) time(NULL));
+    int height = rand()%150+40;
+    int width = rand()%10+15;
+    Node ac1 ={hBmpAircraft,wnd_rect.right+600,height,1,1};
+    Node ac2 ={hBmpAircraft,wnd_rect.right+600+width,height+10,1,1};
+    Node ac3 ={hBmpAircraft,wnd_rect.right+600+width*2,height+20,1,1};
+    Node ac4 ={hBmpAircraft,wnd_rect.right+600+width*3,height+30,1,1};
+    Node ac5 ={hBmpAircraft,wnd_rect.right+600+width*4,height+40,1,1};
+    aircraft.push_back(ac1);
+    aircraft.push_back(ac2);
+    aircraft.push_back(ac3);
+    aircraft.push_back(ac4);
+    aircraft.push_back(ac5);
+    interval2+=1300;
   }
 }
 
@@ -461,6 +554,11 @@ VOID PaintBattleships(HDC hdc,HDC hMemDC,int x, int y){
       SelectObject(hMemDC,dd[i].image);
       TransparentBlt(hdc,dd[i].x,dd[i].y,100,100,hMemDC,0,0,100,50,RGB(0,255,0));
     }
+
+    for(unsigned int i=0; i<aircraft.size(); i++){
+      SelectObject(hMemDC,aircraft[i].image);
+      TransparentBlt(hdc,aircraft[i].x,aircraft[i].y,16,6,hMemDC,0,0,16,6,RGB(0,255,0));
+    }
 }
 
 
@@ -470,6 +568,10 @@ VOID PaintShell(HDC hdc)
     SelectObject(hdc , GetStockObject(BLACK_BRUSH));
     for(unsigned int i = 0; i<shell.size(); i++){
         Rectangle(hdc , shell[i].x , shell[i].y , shell[i].x + Shell_W, shell[i].y + Shell_H);
+    }
+    //bomb
+    for(unsigned int i = 0; i<bomb.size(); i++){
+        Rectangle(hdc , bomb[i].x , bomb[i].y , bomb[i].x + 5, bomb[i].y + 3);
     }
     SelectObject(hdc , hBrushShell2);
     for(unsigned int i = 0; i<shell2.size(); i++){
