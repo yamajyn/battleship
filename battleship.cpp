@@ -510,11 +510,11 @@ VOID MoveShell(){
         bomb[i].x = bomb[i].sx + (BOMB_MOVE * cos(bomb[i].firingAngle)*t)*14.;
         bomb[i].y = bomb[i].sy + (g*t*t/2.)*10.;
     }
-    g = 0.0;
+
     for(unsigned int i = 0; i<shell2.size(); i++){
         double t = double(now - shell2[i].firingTime)/1000.;
         shell2[i].x = gun.x-6. + (Shell2_MOVE * cos(shell2[i].firingAngle)*t)*14.;
-        shell2[i].y = gun.y-7. + (-Shell2_MOVE*sin(shell2[i].firingAngle) * t + g*t*t/2.)*10.;
+        shell2[i].y = gun.y-7. + (-Shell2_MOVE*sin(shell2[i].firingAngle) * t )*12.;
     }
 }
 VOID MoveDD(){
