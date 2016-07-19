@@ -109,12 +109,31 @@ HBITMAP hBmpDD;
 #define IMAGE_07 TEXT("img/destroyer.bmp")
 int interval = 2000;
 
-vector<Node> aircraft;
+typedef struct {
+    HBITMAP image;
+    float x;
+    float y;
+    float speed;
+    int life;
+    bool bomb;
+} Plane;
+
+vector<Plane> aircraft;
 HBITMAP hBmpAircraft;
 int interval2 = 1300;
 
+typedef struct {
+    HBITMAP image;
+    float x;
+    float y;
+    float moveX;
+    float moveY;
+    float speed;
+    int mode;
+} Biplane;
+
 HBITMAP hBmpAircraft2,hBmpAircraft3;
-Node aircraft2;
+Biplane aircraft2;
 
 typedef struct {
     HBITMAP image;
@@ -161,7 +180,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,PSTR lpCmdLine,
     wc.cbClsExtra	= 0;
     wc.cbWndExtra	= 0;
     wc.hInstance	= hInstance;
-    wc.hIcon	= LoadIcon(NULL , IDI_APPLICATION);
+    wc.hIcon	= LoadIcon(hInstance , TEXT("ICON1"));
     wc.hCursor	= LoadCursor(NULL , IDC_ARROW);
     wc.hbrBackground= (HBRUSH)GetStockObject(WHITE_BRUSH);
     wc.lpszMenuName	= NULL;
@@ -244,6 +263,22 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_KEYDOWN:
             if (GetKeyState(VK_ESCAPE) < 0) {
               DestroyWindow(hWnd);
+            }else if(GetKeyState(VK_SPACE) < 0){
+              if(aircraft2.mode == 0){
+                aircraft2.mode = 1;
+              }else if(aircraft2.mode == 3){
+                Bomb bom = {aircraft2.x,aircraft2.y+5,aircraft2.x,aircraft2.y+5,clock(),0};
+                bomb.push_back(bom);
+                aircraft2.mode = 4;
+              }
+            }else if(GetKeyState('W') <0){
+              if(aircraft2.mode == 3 ){
+                aircraft2.moveY = -aircraft2.speed;
+              }
+            }else if(GetKeyState('S') <0){
+              if(aircraft2.mode == 3 ){
+                aircraft2.moveY = aircraft2.speed;
+              }
             }
 
         case WM_PAINT:
@@ -357,18 +392,18 @@ VOID posInit(){
   Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,0.5,5};
   dd.push_back(node);
 
-  Node ac1 ={hBmpAircraft,wnd_rect.right+600,150,1,1};
-  Node ac2 ={hBmpAircraft,wnd_rect.right+615,160,1,1};
-  Node ac3 ={hBmpAircraft,wnd_rect.right+630,170,1,1};
-  Node ac4 ={hBmpAircraft,wnd_rect.right+645,180,1,1};
-  Node ac5 ={hBmpAircraft,wnd_rect.right+660,190,1,1};
+  Plane ac1 ={hBmpAircraft,wnd_rect.right+600,150,1,1,true};
+  Plane ac2 ={hBmpAircraft,wnd_rect.right+615,160,1,1,true};
+  Plane ac3 ={hBmpAircraft,wnd_rect.right+630,170,1,1,true};
+  Plane ac4 ={hBmpAircraft,wnd_rect.right+645,180,1,1,true};
+  Plane ac5 ={hBmpAircraft,wnd_rect.right+660,190,1,1,true};
   aircraft.push_back(ac1);
   aircraft.push_back(ac2);
   aircraft.push_back(ac3);
   aircraft.push_back(ac4);
   aircraft.push_back(ac5);
 
-  Node playerAc = {hBmpAircraft2,80,150,1,1};
+  Biplane playerAc = {hBmpAircraft2,75,267,0,0,1,0};
   aircraft2 = playerAc;
 
   srand ((unsigned) time(NULL));
@@ -399,10 +434,26 @@ VOID Collision(){
   //bomb
   for(unsigned int i=0; i<bomb.size(); i++){
     if(bomb[i].y>290){
-      Effect fx = {hBmpFE[0],bomb[i].x-20,bomb[i].y-30,80*(4-playerLife)/4,80*(4-playerLife)/4,60};
-      fE.push_back(fx);
-      bomb.erase(bomb.begin()+i);
-      playerLife--;
+      if(bomb[i].x<250){
+        Effect fx = {hBmpFE[0],bomb[i].x-20,bomb[i].y-30,80*(4-playerLife)/4,80*(4-playerLife)/4,60};
+        fE.push_back(fx);
+        bomb.erase(bomb.begin()+i);
+        playerLife--;
+      }
+      else if(bomb[i].x>=300){
+        for(unsigned int j=0; j<dd.size(); j++){
+          if(bomb[i].x>dd[j].x && bomb[i].x<dd[j].x+70){
+            Effect fx = {hBmpFE[0],bomb[i].x-20,bomb[i].y-30,50,50,60};
+            fE.push_back(fx);
+            bomb.erase(bomb.begin()+i);
+            dd[i].life-=5;
+          }else{
+            Effect a = {hBmpWE[0],bomb[i].x,wnd_rect.bottom-110,30,50,70};
+            wE.push_back(a);
+            bomb.erase(bomb.begin()+i);
+          }
+        }
+      }
     }
   }
   //shell2
@@ -477,9 +528,9 @@ VOID MoveDD(){
     }
   }
   if(interval<=0){
-    Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,0.5,5};
+    Node node ={hBmpDD,wnd_rect.right+100,wnd_rect.bottom-130,0.5+score/10000,5};
     dd.push_back(node);
-    interval+=2000;
+    interval+=2000-score/20;
   }
 }
 
@@ -492,30 +543,104 @@ VOID MoveAircraft(){
       aircraft.erase(aircraft.begin()+i);
       score+=30;
       break;
-    }else if(aircraft[i].x==260){
+    }else if(aircraft[i].x<=260&&aircraft[i].bomb){
       Bomb bom = {aircraft[i].x,aircraft[i].y+5,aircraft[i].x,aircraft[i].y+5,clock(),3.14};
       bomb.push_back(bom);
+      aircraft[i].bomb = false;
     }
     if(aircraft[i].x<-100){
       aircraft.erase(aircraft.begin()+i);
     }
+    if(score>1000){
+      srand ((unsigned) time(NULL));
+      aircraft[i].y+=(rand()*i%3/4.-1./3)*score/1000.;
+      aircraft[i].x+=(rand()*i*27%3/4.-1./3)*score/1000.;
+    }
+    if(aircraft[i].y<60){
+      aircraft[i].y=60;
+    }else if(aircraft[i].y>230){
+      aircraft[i].y=230;
+    }
   }
   if(interval2<=0){
     srand ((unsigned) time(NULL));
-    int height = rand()%150+40;
+    int height = rand()%150+60;
     int width = rand()%10+15;
-    Node ac1 ={hBmpAircraft,wnd_rect.right+600,height,1,1};
-    Node ac2 ={hBmpAircraft,wnd_rect.right+600+width,height+10,1,1};
-    Node ac3 ={hBmpAircraft,wnd_rect.right+600+width*2,height+20,1,1};
-    Node ac4 ={hBmpAircraft,wnd_rect.right+600+width*3,height+30,1,1};
-    Node ac5 ={hBmpAircraft,wnd_rect.right+600+width*4,height+40,1,1};
+    Plane ac1 ={hBmpAircraft,wnd_rect.right+600,height,1+score/5000.,1,true};
+    Plane ac2 ={hBmpAircraft,wnd_rect.right+600+width,height+10,1+score/5000.,1,true};
+    Plane ac3 ={hBmpAircraft,wnd_rect.right+600+width*2,height+20,1+score/5000.,1,true};
+    Plane ac4 ={hBmpAircraft,wnd_rect.right+600+width*3,height+30,1+score/5000.,1,true};
+    Plane ac5 ={hBmpAircraft,wnd_rect.right+600+width*4,height+40,1+score/5000.,1,true};
     aircraft.push_back(ac1);
     aircraft.push_back(ac2);
     aircraft.push_back(ac3);
     aircraft.push_back(ac4);
     aircraft.push_back(ac5);
-    interval2+=1300;
+    interval2+=1300-score/10;
   }
+  switch (aircraft2.mode) {
+    case 0: aircraft2.moveX=0;
+            aircraft2.moveY=0;
+            aircraft2.x = 75;
+            aircraft2.y = 267;
+            break;
+    case 1: aircraft2.moveX=-aircraft2.speed;
+            aircraft2.moveY=-aircraft2.speed/4;
+            if(aircraft2.x<-100){
+              aircraft2.mode=2;
+            }
+            break;
+    case 2: aircraft2.image = hBmpAircraft3;
+            aircraft2.moveX = aircraft2.speed;
+            aircraft2.moveY = -aircraft2.speed/4;
+            if(aircraft2.x>250){
+              aircraft2.mode = 3;
+            }
+            break;
+    case 3: aircraft2.moveX = aircraft2.speed;
+            if(aircraft2.x>wnd_rect.right-80){
+              Bomb bom = {aircraft2.x,aircraft2.y+5,aircraft2.x,aircraft2.y+5,clock(),0};
+              bomb.push_back(bom);
+              aircraft2.mode = 4;
+            }
+            break;
+    case 4: aircraft2.image = hBmpAircraft2;
+            aircraft2.moveX = -aircraft2.speed;
+            if(aircraft2.y>267){
+              aircraft2.moveY = -aircraft2.speed/5;
+            }else if(aircraft2.y<267){
+              aircraft2.moveY = aircraft2.speed;
+            }else{
+              aircraft2.moveY = 0;
+            }
+            if(aircraft2.x<=75){
+              aircraft2.mode = 0;
+            }
+            break;
+    case 10:  aircraft2.x=-100;
+              aircraft2.moveY=0;
+              aircraft2.moveX=0;
+              break;
+    case 11:  aircraft2.moveY = 0;
+              aircraft2.moveX = 0;
+              break;
+
+  }
+  aircraft2.x += aircraft2.moveX;
+  aircraft2.y += aircraft2.moveY;
+
+  if(aircraft2.y<10){
+    aircraft2.y = 10;
+  }else if(aircraft2.y>wnd_rect.bottom-55){
+    Effect a = {hBmpWE[0],aircraft2.x-5,wnd_rect.bottom-110,30,50,70};
+    wE.push_back(a);
+    aircraft2.mode = 10;
+  }
+
+  aircraft2.moveX=0;
+  aircraft2.moveY=0;
+
+
 }
 
 VOID MoveCloud(){
@@ -540,9 +665,9 @@ VOID Paint(HDC hdc,HDC hMemDC){
     PaintFE(hdc,hMemDC);
 
     PaintScore(hdc,hMemDC);
-    char buf[128];
-    sprintf(buf," mouse  %d %d gunAngle %0.3f Score: %d ",mouse.x,mouse.y,gunAngle,score);
-    TextOut(hdc,200,0,buf,strlen(buf));
+    //char buf[128];
+    //sprintf(buf," mouse  %d %d gunAngle %0.3f Score: %d ",mouse.x,mouse.y,gunAngle,score);
+    //TextOut(hdc,200,0,buf,strlen(buf));
 }
 
 VOID PaintBackground(HDC hdc,HDC hMemDC){
@@ -571,7 +696,8 @@ VOID PaintBattleships(HDC hdc,HDC hMemDC,int x, int y){
     }
     TransparentBlt(hdc,x,y,200,90,hMemDC,0,0,200,100,RGB(0,255,0));
 
-
+    SelectObject(hMemDC,aircraft2.image);
+    TransparentBlt(hdc,aircraft2.x,aircraft2.y,20,10,hMemDC,0,0,10,5,RGB(0,255,0));
 
     //enemy
 
@@ -585,8 +711,7 @@ VOID PaintBattleships(HDC hdc,HDC hMemDC,int x, int y){
       TransparentBlt(hdc,aircraft[i].x,aircraft[i].y,16,6,hMemDC,0,0,16,6,RGB(0,255,0));
     }
 
-    SelectObject(hMemDC,aircraft2.image);
-    TransparentBlt(hdc,aircraft2.x,aircraft2.y,12,7,hMemDC,0,0,12,7,RGB(0,255,0));
+
 }
 
 
@@ -666,5 +791,6 @@ VOID PaintScore(HDC hdc,HDC hMemDC){
     TransparentBlt(hdc,wnd_rect.right/2-128,wnd_rect.bottom/2-14,256,28,hMemDC,0,0,64,7,RGB(0,255,0));
     Effect fx = {hBmpFE[0],160-50,280-50,100,100,60};
     fE.push_back(fx);
+    aircraft2.mode = 11;
   }
 }
