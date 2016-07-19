@@ -113,7 +113,8 @@ vector<Node> aircraft;
 HBITMAP hBmpAircraft;
 int interval2 = 1300;
 
-
+HBITMAP hBmpAircraft2,hBmpAircraft3;
+Node aircraft2;
 
 typedef struct {
     HBITMAP image;
@@ -186,8 +187,6 @@ LRESULT CALLBACK WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     HDC hdc;
     PAINTSTRUCT ps;
     static DWORD dwThreadID;
-
-    /*??¿½?¿½_??¿½?¿½u??¿½?¿½??¿½?¿½??¿½?¿½o??¿½?¿½b??¿½?¿½t??¿½?¿½@??¿½?¿½??¿½?¿½??¿½?¿½??¿½?¿½??¿½?¿½O??¿½?¿½p??¿½?¿½Ìƒr??¿½?¿½b??¿½?¿½g??¿½?¿½}??¿½?¿½b??¿½?¿½v??¿½?¿½Æƒf??¿½?¿½o??¿½?¿½C??¿½?¿½X??¿½?¿½R??¿½?¿½??¿½?¿½??¿½?¿½e??¿½?¿½L??¿½?¿½X??¿½?¿½g*/
     static HBITMAP hWndBuffer;
     static HDC hBufferDC;
 
@@ -285,6 +284,9 @@ VOID loadImages(HINSTANCE hInstance){
     hBmpDD = (HBITMAP)LoadImage(hInstance,IMAGE_07,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 
     hBmpAircraft = (HBITMAP)LoadImage(hInstance,TEXT("img/aircraft.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    hBmpAircraft2 = (HBITMAP)LoadImage(hInstance,TEXT("img/aircraft2.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+    hBmpAircraft3 = (HBITMAP)LoadImage(hInstance,TEXT("img/aircraft3.bmp"),IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+
 
     hBmpWE[0] = (HBITMAP)LoadImage(hInstance,IMAGE_08,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
     hBmpWE[1] = (HBITMAP)LoadImage(hInstance,IMAGE_09,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
@@ -365,6 +367,9 @@ VOID posInit(){
   aircraft.push_back(ac3);
   aircraft.push_back(ac4);
   aircraft.push_back(ac5);
+
+  Node playerAc = {hBmpAircraft2,80,150,1,1};
+  aircraft2 = playerAc;
 
   srand ((unsigned) time(NULL));
   for(int i=0; i<10;i++){
@@ -566,6 +571,8 @@ VOID PaintBattleships(HDC hdc,HDC hMemDC,int x, int y){
     }
     TransparentBlt(hdc,x,y,200,90,hMemDC,0,0,200,100,RGB(0,255,0));
 
+
+
     //enemy
 
     for(unsigned int i=0; i<dd.size(); i++){
@@ -577,6 +584,9 @@ VOID PaintBattleships(HDC hdc,HDC hMemDC,int x, int y){
       SelectObject(hMemDC,aircraft[i].image);
       TransparentBlt(hdc,aircraft[i].x,aircraft[i].y,16,6,hMemDC,0,0,16,6,RGB(0,255,0));
     }
+
+    SelectObject(hMemDC,aircraft2.image);
+    TransparentBlt(hdc,aircraft2.x,aircraft2.y,12,7,hMemDC,0,0,12,7,RGB(0,255,0));
 }
 
 
