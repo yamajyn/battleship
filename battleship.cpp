@@ -181,7 +181,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,PSTR lpCmdLine,
     wc.cbWndExtra	= 0;
     wc.hInstance	= hInstance;
     wc.hIcon	= LoadIcon(hInstance , TEXT("ICON1"));
-    wc.hCursor	= LoadCursor(NULL , IDC_ARROW);
+    wc.hCursor	= LoadCursor(hInstance , TEXT("CURSOR1"));
     wc.hbrBackground= (HBRUSH)GetStockObject(WHITE_BRUSH);
     wc.lpszMenuName	= NULL;
     wc.lpszClassName= APP_NAME;
@@ -475,6 +475,16 @@ VOID Collision(){
       shell2.erase(shell2.begin()+i);
     }
   }
+
+  //plane&Plane
+  for(unsigned int i=0; i<aircraft.size(); i++){
+    if(abs(aircraft[i].y-aircraft2.y)<8 && abs(aircraft[i].x-aircraft2.x)<8){
+      Effect fx = {hBmpFE[0],aircraft[i].x-30,aircraft[i].y-10,25,25,60};
+      fE.push_back(fx);
+      aircraft2.mode = 10;
+      aircraft[i].life--;
+    }
+  }
 }
 
 VOID MoveGun(){
@@ -538,7 +548,7 @@ VOID MoveAircraft(){
   for(unsigned int i=0; i<aircraft.size(); i++){
     aircraft[i].x -= aircraft[i].speed;
     if(aircraft[i].life<=0){
-      Effect fx = {hBmpFE[0],aircraft[i].x,aircraft[i].y,30,30,60};
+      Effect fx = {hBmpFE[0],aircraft[i].x-15,aircraft[i].y,30,30,60};
       fE.push_back(fx);
       aircraft.erase(aircraft.begin()+i);
       score+=30;
@@ -631,7 +641,7 @@ VOID MoveAircraft(){
 
   if(aircraft2.y<10){
     aircraft2.y = 10;
-  }else if(aircraft2.y>wnd_rect.bottom-55){
+  }else if(aircraft2.y>wnd_rect.bottom-60){
     Effect a = {hBmpWE[0],aircraft2.x-5,wnd_rect.bottom-110,30,50,70};
     wE.push_back(a);
     aircraft2.mode = 10;
