@@ -429,6 +429,7 @@ VOID Collision(){
           }
         }
         shell.erase(shell.begin()+i);
+        break;
       }
   }
   //bomb
@@ -439,6 +440,7 @@ VOID Collision(){
         fE.push_back(fx);
         bomb.erase(bomb.begin()+i);
         playerLife--;
+        break;
       }
       else if(bomb[i].x>=300){
         for(unsigned int j=0; j<dd.size(); j++){
@@ -464,8 +466,8 @@ VOID Collision(){
       Effect fx = {hBmpFE[0],shell2[i].x-30,shell2[i].y-30,25,25,60};
       fE.push_back(fx);
       for(unsigned int j=0; j<aircraft.size(); j++){
-        if(shell2[i].x>aircraft[j].x-20 && shell2[i].x<aircraft[j].x+20){
-          if(shell2[i].y>aircraft[j].y-20 && shell2[i].y<aircraft[j].y+20){
+        if(shell2[i].x>aircraft[j].x-15 && shell2[i].x<aircraft[j].x+15){
+          if(shell2[i].y>aircraft[j].y-15 && shell2[i].y<aircraft[j].y+15){
             Effect fx2 = {hBmpFE[0],shell2[i].x-30,shell2[i].y-30,40,40,60};
             fE.push_back(fx2);
             if(playerLife>0){
@@ -475,6 +477,7 @@ VOID Collision(){
         }
       }
       shell2.erase(shell2.begin()+i);
+      break;
     }
   }
 
@@ -537,6 +540,7 @@ VOID MoveDD(){
       fE.push_back(fx3);
       dd.erase(dd.begin()+i);
       score+=100;
+      break;
     }
   }
   if(interval<=0){
@@ -562,6 +566,7 @@ VOID MoveAircraft(){
     }
     if(aircraft[i].x<-100){
       aircraft.erase(aircraft.begin()+i);
+      break;
     }
     if(score>1000){
       srand ((unsigned) time(NULL));
@@ -755,6 +760,7 @@ VOID PaintWE(HDC hdc,HDC hMemDC){
     wE[i].life-=1;
     if(wE[i].life<0){
       wE.erase(wE.begin()+i);
+      break;
     }
   }
 }
@@ -770,6 +776,7 @@ VOID PaintFE(HDC hdc,HDC hMemDC){
     fE[i].life-=1;
     if(fE[i].life<0){
       fE.erase(fE.begin()+i);
+      break;
     }
   }
 }
